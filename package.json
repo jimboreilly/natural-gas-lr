@@ -1,0 +1,23 @@
+{
+  "name": "natural-gas-lr",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JamesMReilly/natural-gas-lr.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JamesMReilly/natural-gas-lr/issues"
+  },
+  "homepage": "https://github.com/JamesMReilly/natural-gas-lr#readme",
+  "dependencies": {
+    "mathjs": "^4.0.1"
+  }
+}

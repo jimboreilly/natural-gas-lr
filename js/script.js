@@ -1,3 +1,7 @@
+var math = require('mathjs');
+
+console.log(math.simplify('3 + 2 / 4').toString());
+
 var svg = d3.select("#flow");
 
 var width = svg.attr("width");
