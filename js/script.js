@@ -26,15 +26,10 @@ function parseLine(line) {
 }
 
 d3.csv("data/GasData.csv", parseLine, function (error, data) {
-  console.log(error);
   gasData = data;
 
-  console.log(gasData);
   dateExtent = d3.extent(gasData, function (d) { return d.Date; });
   flowExtent = d3.extent(gasData, function (d) { return d.Flow; });
-
-  console.log(dateExtent);
-  console.log(flowExtent);
 
   update();
 });
@@ -50,13 +45,13 @@ function update() {
     .range([xPadding, width - xPadding])
 
   flowScale = d3.scaleLinear()
-    .domain(flowExtent)
+    .domain([0, flowExtent[1] + 200])
     .range([height - yPadding, yPadding])
 
-  plotGrowthOverInitialOverall(svg, gasData, dateScale, flowScale)
+  plotNaturalGasActuals(svg, gasData, dateScale, flowScale)
 }
 
-function plotGrowthOverInitialOverall(svg, gasData, dateScale, flowScale) {
+function plotNaturalGasActuals(svg, gasData, dateScale, flowScale) {
   gasData.map(function (dayWithData) {
     svg.append("circle")
       .attr("cx", dateScale(dayWithData.Date))
