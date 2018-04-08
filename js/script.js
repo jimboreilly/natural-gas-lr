@@ -1,7 +1,6 @@
 var math = require('mathjs');
 
 var svg = d3.select("#flow");
-
 var width = svg.attr("width");
 var height = svg.attr("height");
 
@@ -12,11 +11,12 @@ var yPadding = 80;
 // Define variables outside the scope of the callback function.
 var gasData;
 var gasMatrix;
+
+var BetaBaseLoad = 50;
+var BetaHdd65 = 0;
+
 var dateExtent;
 var flowExtent;
-
-var dateScale;
-var flowScale;
 
 // This function will be applied to all rows of GasData.csv
 function parseLine(line) {
@@ -28,13 +28,33 @@ function parseLine(line) {
   };
 }
 
-function normalEquation(X, y) {
-  let theta = math.eval(`inv(X' * X) * X' * y`, {
-    X,
+//evaluate linear regression given coefficients
+function forecastNaturalGasDemand(gasMatrix, Beta0, Beta1) {
+  let betas = [[Beta0], [Beta1]];
+  let A = math.eval('gasMatrix[:, 1:2]', {
+    gasMatrix,
+  });
+  let model = math.eval('A * betas', { A, betas });
+
+  gasData.map(function (dayWithData, i) {
+    dayWithData.Model = model[i][0];
+  });
+}
+
+function solveLeastSquaresCoefficients(gasMatrix) {
+  let A = math.eval('gasMatrix[:, 1:2]', {
+    gasMatrix,
+  });
+  let y = math.eval('gasMatrix[:, 3]', {
+    gasMatrix,
+  });
+
+  let betas = math.eval(`inv(A' * A) * A' * y`, {
+    A,
     y,
   });
 
-  return theta;
+  return betas;
 }
 
 function buildGasMatrix(gasData) {
@@ -52,37 +72,71 @@ d3.csv("data/GasData.csv", parseLine, function (error, data) {
   })
 
   gasMatrix = buildGasMatrix(gasData);
-
-  let A = math.eval('gasMatrix[:, 1:2]', {
-    gasMatrix,
-  });
-  let y = math.eval('gasMatrix[:, 3]', {
-    gasMatrix,
-  });
-
-  let betas = normalEquation(A, y);
-  let model = math.eval('A * betas', { A, betas });
+  let betas = solveLeastSquaresCoefficients(gasMatrix)
+  forecastNaturalGasDemand(gasMatrix, betas[0][0], betas[1][0])
 
   console.log(betas);
-  console.log(model);
-
-  gasData.map(function (dayWithData, i) {
-    dayWithData.Model = model[i][0];
-  })
-
   console.log(gasData);
 
   dateExtent = d3.extent(gasData, function (d) { return d.Date; });
   flowExtent = d3.extent(gasData, function (d) { return d.Flow; });
 
+  drawInitialGraph();
+  initializeSliders(flowExtent);
   update();
 });
 
+function initializeSliders(flowExtent) {
+  var slidersDiv = d3.select("#sliders");
+  slidersDiv.append("div")
+    .text("Base Load")
+    .append("div")
+    .append("input").attr("type", "range").attr("class", "slider")
+    .attr("min", flowExtent[0] - 200)
+    .attr("max", flowExtent[1])
+    .attr("value", "100")
+    .style("width", "900px")
+    .on("input", function () {
+      BetaBaseLoad = Number(this.value);
+      console.log(BetaBaseLoad);
+      update();
+    });
+
+  slidersDiv.append("div")
+    .text("Temperature")
+    .append("div")
+    .append("input").attr("type", "range").attr("class", "slider")
+    .attr("min", 0)
+    .attr("max", 40)
+    .attr("value", 0)
+    .style("width", "900px")
+    .on("input", function () {
+      BetaHdd65 = Number(this.value);
+      console.log(BetaHdd65);
+      update();
+    });
+}
+
+function drawInitialGraph() {
+  dateScale = d3.scaleTime()
+    .domain(dateExtent)
+    .range([xPadding, width - xPadding])
+
+  flowScale = d3.scaleLinear()
+    .domain([0, flowExtent[1] + 200])
+    .range([height - yPadding, yPadding])
+
+  //plot the graph, axis, and both data sets
+  plotNaturalGasActuals(svg, gasData, dateScale, flowScale);
+  plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
+  plotAxis(svg, dateScale, flowScale);
+}
+
 function update() {
-  //remove all content from svg
-  svg.selectAll("g > *").remove();
-  svg.selectAll("text").remove();
-  svg.selectAll("circle").remove();
+  forecastNaturalGasDemand(gasMatrix, BetaBaseLoad, BetaHdd65);
+
+  //remove all forecasted data points
+  svg.selectAll("circle").filter(".forecast").remove();
 
   dateScale = d3.scaleTime()
     .domain(dateExtent)
@@ -92,14 +146,14 @@ function update() {
     .domain([0, flowExtent[1] + 200])
     .range([height - yPadding, yPadding])
 
-  plotNaturalGasActuals(svg, gasData, dateScale, flowScale);
+  //replot the forecasted data points
   plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
-  plotAxis(svg, dateScale, flowScale);
 }
 
 function plotNaturalGasActuals(svg, gasData, dateScale, flowScale) {
   gasData.map(function (dayWithData) {
     svg.append("circle")
+      .attr("class", "actual")
       .attr("cx", dateScale(dayWithData.Date))
       .attr("cy", flowScale(dayWithData.Flow))
       .attr("r", 2)
@@ -110,6 +164,7 @@ function plotNaturalGasActuals(svg, gasData, dateScale, flowScale) {
 function plotNaturalGasForecasts(svg, gasData, dateScale, flowScale) {
   gasData.map(function (dayWithData) {
     svg.append("circle")
+      .attr("class", "forecast")
       .attr("cx", dateScale(dayWithData.Date))
       .attr("cy", flowScale(dayWithData.Model))
       .attr("r", 2)
