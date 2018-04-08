@@ -1,7 +1,5 @@
 var math = require('mathjs');
 
-console.log(math.simplify('3 + 2 / 4').toString());
-
 var svg = d3.select("#flow");
 
 var width = svg.attr("width");
@@ -13,6 +11,7 @@ var yPadding = 80;
 
 // Define variables outside the scope of the callback function.
 var gasData;
+var gasMatrix;
 var dateExtent;
 var flowExtent;
 
@@ -29,8 +28,49 @@ function parseLine(line) {
   };
 }
 
+function normalEquation(X, y) {
+  let theta = math.eval(`inv(X' * X) * X' * y`, {
+    X,
+    y,
+  });
+
+  return theta;
+}
+
+function buildGasMatrix(gasData) {
+  gasMatrix = gasData.map(dayWithData => {
+    return ['1', dayWithData.Hdd65.toString(), dayWithData.Flow.toString()] //prepend intercept '1' for regression
+  })
+  return gasMatrix;
+}
+
 d3.csv("data/GasData.csv", parseLine, function (error, data) {
   gasData = data;
+
+  gasData.map(function (dayWithData) {
+    dayWithData.Hdd65 = Math.max(65 - dayWithData.Temp, 0) //Heating Degree day is measurement of degrees below 65
+  })
+
+  gasMatrix = buildGasMatrix(gasData);
+
+  let A = math.eval('gasMatrix[:, 1:2]', {
+    gasMatrix,
+  });
+  let y = math.eval('gasMatrix[:, 3]', {
+    gasMatrix,
+  });
+
+  let betas = normalEquation(A, y);
+  let model = math.eval('A * betas', { A, betas });
+
+  console.log(betas);
+  console.log(model);
+
+  gasData.map(function (dayWithData, i) {
+    dayWithData.Model = model[i][0];
+  })
+
+  console.log(gasData);
 
   dateExtent = d3.extent(gasData, function (d) { return d.Date; });
   flowExtent = d3.extent(gasData, function (d) { return d.Flow; });
@@ -44,7 +84,7 @@ function update() {
   svg.selectAll("text").remove();
   svg.selectAll("circle").remove();
 
-  dateScale = d3.scaleLinear()
+  dateScale = d3.scaleTime()
     .domain(dateExtent)
     .range([xPadding, width - xPadding])
 
@@ -52,7 +92,9 @@ function update() {
     .domain([0, flowExtent[1] + 200])
     .range([height - yPadding, yPadding])
 
-  plotNaturalGasActuals(svg, gasData, dateScale, flowScale)
+  plotNaturalGasActuals(svg, gasData, dateScale, flowScale);
+  plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
+  plotAxis(svg, dateScale, flowScale);
 }
 
 function plotNaturalGasActuals(svg, gasData, dateScale, flowScale) {
@@ -63,15 +105,27 @@ function plotNaturalGasActuals(svg, gasData, dateScale, flowScale) {
       .attr("r", 2)
       .style("fill", "#45b3e7")
   })
+}
 
-  //x-axis, current overall rating
-  var bottomAxis = d3.axisBottom(dateScale)
+function plotNaturalGasForecasts(svg, gasData, dateScale, flowScale) {
+  gasData.map(function (dayWithData) {
+    svg.append("circle")
+      .attr("cx", dateScale(dayWithData.Date))
+      .attr("cy", flowScale(dayWithData.Model))
+      .attr("r", 2)
+      .style("fill", "#ffa500")
+  })
+}
+
+function plotAxis(svg, dateScale, flowScale) {
+  //x-axis, Date (daily)
+  var bottomAxis = d3.axisBottom(dateScale).tickFormat(d3.timeFormat('%Y-%m'));
   svg.append("g")
     .attr("transform", "translate(0," + (height - xPadding) + ")")
     .attr("class", "xaxis")
     .call(bottomAxis);
 
-  //y-axis, growth in overall
+  //y-axis, Scaled natural gas consumption
   var leftAxis = d3.axisLeft(flowScale);
   svg.append("g")
     .attr("class", "yaxis")
@@ -87,6 +141,5 @@ function plotNaturalGasActuals(svg, gasData, dateScale, flowScale) {
   svg.append("text")
     .attr("transform", "translate(" + yPadding / 3 + "," + (height / 1.7) + ")rotate(270)")
     .text("Scaled Sendout");
-
 }
 
