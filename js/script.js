@@ -41,6 +41,17 @@ function forecastNaturalGasDemand(gasMatrix, Beta0, Beta1) {
   });
 }
 
+function calculateModelError(gasData) {
+  error = 0;
+  gasData.map((dayWithData) => {
+    let residual = dayWithData.Model - dayWithData.Flow;
+    let relativeResidual = residual / dayWithData.Flow;
+    let absoluteRelativeResidual = Math.abs(relativeResidual);
+    error += absoluteRelativeResidual;
+  })
+  return error / gasData.length;
+}
+
 function solveLeastSquaresCoefficients(gasMatrix) {
   let A = math.eval('gasMatrix[:, 1:2]', {
     gasMatrix,
@@ -130,6 +141,7 @@ function drawInitialGraph() {
   plotNaturalGasActuals(svg, gasData, dateScale, flowScale);
   plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
   plotAxis(svg, dateScale, flowScale);
+  error = calculateModelError(gasData);
 }
 
 function update() {
