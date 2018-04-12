@@ -28,6 +28,17 @@ function parseLine(line) {
   };
 }
 
+//format a float error as a percentage string
+function formatPercentage(x) {
+  var option = {
+    style: 'percent',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  };
+  var formatter = new Intl.NumberFormat("en-US", option);
+  return formatter.format(x);
+}
+
 //evaluate linear regression given coefficients
 function forecastNaturalGasDemand(gasMatrix, Beta0, Beta1) {
   let betas = [[Beta0], [Beta1]];
@@ -109,7 +120,6 @@ function initializeSliders(flowExtent) {
     .style("width", "900px")
     .on("input", function () {
       BetaBaseLoad = Number(this.value);
-      console.log(BetaBaseLoad);
       update();
     });
 
@@ -123,7 +133,6 @@ function initializeSliders(flowExtent) {
     .style("width", "900px")
     .on("input", function () {
       BetaHdd65 = Number(this.value);
-      console.log(BetaHdd65);
       update();
     });
 }
@@ -146,7 +155,10 @@ function drawInitialGraph() {
 
 function update() {
   forecastNaturalGasDemand(gasMatrix, BetaBaseLoad, BetaHdd65);
-
+  let error = calculateModelError(gasData);
+  let percentError = formatPercentage(error);
+  d3.select("#error-text").text("Error: " + percentError);
+  console.log(percentError);
   //remove all forecasted data points
   svg.selectAll("circle").filter(".forecast").remove();
 

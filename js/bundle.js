@@ -1,4 +1,4 @@
-(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
 var math = require('mathjs');
 
 var svg = d3.select("#flow");
@@ -29,6 +29,18 @@ function parseLine(line) {
   };
 }
 
+//format a float error as a percentage string
+function formatPercentage(x) {
+  var option = {
+    style: 'percent',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  };
+  var formatter = new Intl.NumberFormat("en-US", option);
+  return formatter.format(x);
+}
+
+//evaluate linear regression given coefficients
 function forecastNaturalGasDemand(gasMatrix, Beta0, Beta1) {
   let betas = [[Beta0], [Beta1]];
   let A = math.eval('gasMatrix[:, 1:2]', {
@@ -39,6 +51,17 @@ function forecastNaturalGasDemand(gasMatrix, Beta0, Beta1) {
   gasData.map(function (dayWithData, i) {
     dayWithData.Model = model[i][0];
   });
+}
+
+function calculateModelError(gasData) {
+  error = 0;
+  gasData.map((dayWithData) => {
+    let residual = dayWithData.Model - dayWithData.Flow;
+    let relativeResidual = residual / dayWithData.Flow;
+    let absoluteRelativeResidual = Math.abs(relativeResidual);
+    error += absoluteRelativeResidual;
+  })
+  return error / gasData.length;
 }
 
 function solveLeastSquaresCoefficients(gasMatrix) {
@@ -98,7 +121,6 @@ function initializeSliders(flowExtent) {
     .style("width", "900px")
     .on("input", function () {
       BetaBaseLoad = Number(this.value);
-      console.log(BetaBaseLoad);
       update();
     });
 
@@ -112,7 +134,6 @@ function initializeSliders(flowExtent) {
     .style("width", "900px")
     .on("input", function () {
       BetaHdd65 = Number(this.value);
-      console.log(BetaHdd65);
       update();
     });
 }
@@ -130,11 +151,15 @@ function drawInitialGraph() {
   plotNaturalGasActuals(svg, gasData, dateScale, flowScale);
   plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
   plotAxis(svg, dateScale, flowScale);
+  error = calculateModelError(gasData);
 }
 
 function update() {
   forecastNaturalGasDemand(gasMatrix, BetaBaseLoad, BetaHdd65);
-
+  let error = calculateModelError(gasData);
+  let percentError = formatPercentage(error);
+  d3.select("#error-text").text("Error: " + percentError);
+  console.log(percentError);
   //remove all forecasted data points
   svg.selectAll("circle").filter(".forecast").remove();
 
