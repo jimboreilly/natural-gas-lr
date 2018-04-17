@@ -89,7 +89,7 @@ var buildGasMatrix = (gasData) => {
 
 d3.csv("data/GasData.csv", parseLine, function (error, data) {
   gasData = data;
-
+  console.log(data);
   gasData.map(function (dayWithData) {
     dayWithData.Hdd65 = Math.max(65 - dayWithData.Temp, 0) //Heating Degree day is measurement of degrees below 65
   })
@@ -227,6 +227,18 @@ var plotAxis = (svg, dateScale, flowScale) => {
   svg.append("text")
     .attr("transform", "translate(" + yPadding / 3 + "," + (height / 1.7) + ")rotate(270)")
     .text("Scaled Sendout");
+}
+
+var newUser = () => {
+  //remove all forecasted data points
+  svg.selectAll("circle").filter(".forecast").remove();
+
+  //reset initial betas
+  BetaBaseLoad = 50;
+  BetaHdd65 = 0;
+
+  plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
+
 }
 
 
