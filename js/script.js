@@ -192,6 +192,7 @@ var plotNaturalGasActuals = (svg, gasData, dateScale, flowScale) => {
 }
 
 var plotNaturalGasForecasts = (svg, gasData, dateScale, flowScale) => {
+  console.log("i was called")
   gasData.map(function (dayWithData) {
     svg.append("circle")
       .attr("class", "forecast")
@@ -228,15 +229,18 @@ var plotAxis = (svg, dateScale, flowScale) => {
     .text("Scaled Sendout");
 }
 
-var newUser = () => {
-  //remove all forecasted data points
-  svg.selectAll("circle").filter(".forecast").remove();
-
-  //reset initial betas
-  BetaBaseLoad = 50;
-  BetaHdd65 = 0;
-
-  plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
-
+window.onload = () => {
+  document.getElementById("newuserbutton").onclick = () => {
+    //remove all forecasted data points
+    svg.selectAll("circle").filter(".forecast").remove();
+    console.log("this works");
+    //reset initial betas
+    BetaBaseLoad = 50;
+    BetaHdd65 = 0;
+    forecastNaturalGasDemand(gasMatrix, BetaBaseLoad, BetaHdd65);
+    plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
+  }
 }
+
+
 
