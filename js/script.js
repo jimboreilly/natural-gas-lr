@@ -18,7 +18,7 @@ var BetaHdd65 = 0;
 
 // trial metadata
 var trials = new Array();
-var username = "This Computer";
+var username;
 var startTime;
 var endTime;
 var percentError;
@@ -101,11 +101,25 @@ d3.csv("data/GasData.csv", parseLine, function (error, data) {
   })
 
   gasMatrix = buildGasMatrix(gasData);
+  let start = new Date();
   let betas = solveLeastSquaresCoefficients(gasMatrix)
   forecastNaturalGasDemand(gasMatrix, betas[0][0], betas[1][0])
+  let end = new Date();
 
   let modelError = calculateModelError(gasData);
   let percentError = formatPercentage(modelError);
+
+  let name = "This Computer";
+  let time = (end - start) / 1000;
+
+  let computerTrial = {
+    Name: name,
+    Error: percentError,
+    Time: time
+  }
+
+  trials = trials.concat(computerTrial);
+  addDataPoint(trials);
 
   dateExtent = d3.extent(gasData, function (d) { return d.Date; });
   flowExtent = d3.extent(gasData, function (d) { return d.Flow; });
