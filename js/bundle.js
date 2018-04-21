@@ -1,20 +1,28 @@
-(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+(function(){function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s}return e})()({1:[function(require,module,exports){
 var math = require('mathjs');
 
 var svg = d3.select("#flow");
-var width = svg.attr("width");
-var height = svg.attr("height");
+const width = svg.attr("width");
+const height = svg.attr("height");
 
 //paddings for minimized size of graph to fit labels/title
-var xPadding = 80;
-var yPadding = 80;
+const xPadding = 80;
+const yPadding = 80;
 
 // Define variables outside the scope of the callback function.
 var gasData;
 var gasMatrix;
 
+// coefficients
 var BetaBaseLoad = 50;
 var BetaHdd65 = 0;
+
+// trial metadata
+var trials = new Array();
+var username = "This Computer";
+var startTime;
+var endTime;
+var percentError;
 
 var dateExtent;
 var flowExtent;
@@ -89,7 +97,6 @@ var buildGasMatrix = (gasData) => {
 
 d3.csv("data/GasData.csv", parseLine, function (error, data) {
   gasData = data;
-  console.log(data);
   gasData.map(function (dayWithData) {
     dayWithData.Hdd65 = Math.max(65 - dayWithData.Temp, 0) //Heating Degree day is measurement of degrees below 65
   })
@@ -100,7 +107,6 @@ d3.csv("data/GasData.csv", parseLine, function (error, data) {
 
   let modelError = calculateModelError(gasData);
   let percentError = formatPercentage(modelError);
-  console.log(percentError);
 
   dateExtent = d3.extent(gasData, function (d) { return d.Date; });
   flowExtent = d3.extent(gasData, function (d) { return d.Flow; });
@@ -112,10 +118,12 @@ d3.csv("data/GasData.csv", parseLine, function (error, data) {
 
 var initializeSliders = (flowExtent) => {
   var slidersDiv = d3.select("#sliders");
-  slidersDiv.append("div")
+  slidersDiv.append("p")
     .text("Base Load")
-    .append("div")
+    .attr("class", "slider-label");
+  slidersDiv.append("div")
     .append("input").attr("type", "range").attr("class", "slider")
+    .attr("id", "baseloadslider")
     .attr("min", flowExtent[0] - 200)
     .attr("max", flowExtent[1])
     .attr("value", "100")
@@ -125,10 +133,12 @@ var initializeSliders = (flowExtent) => {
       update();
     });
 
-  slidersDiv.append("div")
+  slidersDiv.append("p")
     .text("Temperature")
-    .append("div")
+    .attr("class", "slider-label");
+  slidersDiv.append("div")
     .append("input").attr("type", "range").attr("class", "slider")
+    .attr("id", "tempslider")
     .attr("min", 0)
     .attr("max", 40)
     .attr("value", 0)
@@ -157,11 +167,8 @@ var drawInitialGraph = () => {
 
 var update = () => {
   forecastNaturalGasDemand(gasMatrix, BetaBaseLoad, BetaHdd65);
-
   writePercentError(gasData);
-
-  //remove all forecasted data points
-  svg.selectAll("circle").filter(".forecast").remove();
+  deleteForecastedPoints();
 
   dateScale = d3.scaleTime()
     .domain(dateExtent)
@@ -175,9 +182,14 @@ var update = () => {
   plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
 }
 
+var deleteForecastedPoints = () => {
+  //remove all forecasted data points
+  svg.selectAll("circle").filter(".forecast").remove();
+}
+
 var writePercentError = (gasData) => {
   let error = calculateModelError(gasData);
-  let percentError = formatPercentage(error);
+  percentError = formatPercentage(error);
   d3.select("#error-text").text("Error: " + percentError);
 }
 
@@ -193,7 +205,6 @@ var plotNaturalGasActuals = (svg, gasData, dateScale, flowScale) => {
 }
 
 var plotNaturalGasForecasts = (svg, gasData, dateScale, flowScale) => {
-  console.log("i was called")
   gasData.map(function (dayWithData) {
     svg.append("circle")
       .attr("class", "forecast")
@@ -230,17 +241,70 @@ var plotAxis = (svg, dateScale, flowScale) => {
     .text("Scaled Sendout");
 }
 
-window.onload = () => {
-  document.getElementById("newuserbutton").onclick = () => {
-    //remove all forecasted data points
-    svg.selectAll("circle").filter(".forecast").remove();
-    console.log("this works");
-    //reset initial betas
-    BetaBaseLoad = 50;
-    BetaHdd65 = 0;
-    forecastNaturalGasDemand(gasMatrix, BetaBaseLoad, BetaHdd65);
-    plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
+var newUser = () => {
+  deleteForecastedPoints();
+  resetSliders();
+
+  username = prompt("Enter your name: ");
+
+  //reset initial betas
+  BetaBaseLoad = 50; BetaHdd65 = 0;
+  forecastNaturalGasDemand(gasMatrix, BetaBaseLoad, BetaHdd65);
+  plotNaturalGasForecasts(svg, gasData, dateScale, flowScale);
+
+  startTime = new Date();
+}
+
+var resetSliders = () => {
+  document.getElementById("baseloadslider").value = 100;
+  document.getElementById("tempslider").value = 0;
+}
+
+var saveTrial = () => {
+  endTime = new Date();
+  let secondsTimeDiff = (endTime - startTime) / 1000;
+
+  newtrial = {
+    Name: username,
+    Error: percentError,
+    Time: secondsTimeDiff
   }
+  trials = trials.concat(newtrial);
+
+  addDataPoint(trials);
+  console.log(secondsTimeDiff);
+}
+
+var addDataPoint = (trials) => {
+  rows = d3.select("table") // UPDATE
+    .selectAll("tbody")
+    .selectAll("tr")
+    .data(trials);
+
+  rows.exit().remove(); // EXIT
+
+  rows.enter() //ENTER + UPDATE
+    .append('tr')
+    .selectAll("td")
+    .data(function (d) { return [d.Name, d.Error, d.Time]; })
+    .enter()
+    .append("td")
+    .text(function (d) { return d; });
+
+  var cells = rows.selectAll('td') //update existing cells
+    .data(function (d) { return [d.Name, d.Error, d.Time]; })
+    .text(function (d) { return d; });
+
+  cells.enter()
+    .append("td")
+    .text(function (d) { return d; });
+
+  cells.exit().remove();
+}
+
+window.onload = () => {
+  document.getElementById("newuserbutton").onclick = () => { newUser(); }
+  document.getElementById("savetrialbutton").onclick = () => { saveTrial(); }
 }
 
 

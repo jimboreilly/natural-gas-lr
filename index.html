@@ -3,22 +3,45 @@
 
 <head>
   <script src="https://d3js.org/d3.v4.min.js"></script>
-  <link rel="stylesheet" type="text/css" href="css/style.css">
+
   <title>Natural Gas Model</title>
+
+  <link rel="stylesheet" type="text/css" href="css/style.css">
+  <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+
 </head>
 
 <body>
   <div class="container" height="600">
-    <svg id="flow" height="600" width="900" class="left"> </svg>
-    <div id="error" class="right">
-      <p id="error-text" height="600">Error: </p>
-      <button id="newuserbutton">New Trial</button>
-      <button onclick="saveTrial()">Done</button>
+    <svg id="flow" height="700" width="1100" margin-left="-80px"> </svg>
+  </div>
+
+  <div class="container">
+    <div id="outer" class="center">
+      <p style="font-size:20px" class="inner" id="error-text" width="300"></p>
+      <button id="newuserbutton" class="inner btn btn-primary btn-lg">New Trial</button>
+      <button id="savetrialbutton" class="inner btn btn-primary btn-lg" width="33%">Done</button>
     </div>
   </div>
+
   <div class="container">
-    <div id="sliders"></div>
+    <div id="sliders" margin-left="80"></div>
   </div>
+  <div class="container">
+    <table class="table" width="900">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>% Error</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+
+      </tbody>
+    </table>
+  </div>
+
 
   <script type="text/javascript " src="js/bundle.js "></script>
 </body>
