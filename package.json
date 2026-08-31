@@ -18,6 +18,6 @@
   },
   "homepage": "https://github.com/JamesMReilly/natural-gas-lr#readme",
   "dependencies": {
-    "mathjs": "^7.5.1"
+    "mathjs": "^15.2.0"
   }
 }
